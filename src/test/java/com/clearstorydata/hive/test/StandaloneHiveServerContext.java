@@ -16,10 +16,7 @@
 
 package com.clearstorydata.hive.test;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.shims.Hadoop20SShims;
-import org.apache.hadoop.hive.shims.ShimLoader;
 import org.hsqldb.jdbc.JDBCDriver;
 import org.junit.rules.TemporaryFolder;
 
@@ -42,10 +39,10 @@ public class StandaloneHiveServerContext implements HiveServerContext {
 
     private TemporaryFolder basedir;
 
-    public StandaloneHiveServerContext(TemporaryFolder basedir) throws IOException {
+    public StandaloneHiveServerContext(TemporaryFolder basedir, String dbName) throws IOException {
         //final TemporaryFolder testBaseDir = new TemporaryFolder();
         this.basedir = basedir;
-        this.metaStorageUrl = "jdbc:hsqldb:mem:" + UUID.randomUUID().toString();
+        this.metaStorageUrl =  "jdbc:hsqldb:mem:" + dbName;
 
         // my customization
         hiveConf.setIntVar(HIVE_SERVER2_THRIFT_PORT, 10003);
@@ -121,13 +118,14 @@ public class StandaloneHiveServerContext implements HiveServerContext {
          * validates to false.
          *
          * Search for usage of org.apache.hadoop.hive.shims.HadoopShims#isLocalMode to find other affects of this.
-        */
         ReflectionUtils.setStaticField(ShimLoader.class, "hadoopShims", new Hadoop20SShims() {
             @Override
             public boolean isLocalMode(Configuration conf) {
                 return false;
             }
         });
+           */
+
     }
 
     protected void configureFileSystem(TemporaryFolder basedir, HiveConf conf) {
