@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.clearstorydata.hive.test;
+package com.clearstorydata.hive;
 
 import com.google.common.base.Predicate;
 

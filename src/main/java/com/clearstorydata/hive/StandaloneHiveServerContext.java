@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.clearstorydata.hive.test;
+package com.clearstorydata.hive;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.hsqldb.jdbc.JDBCDriver;
@@ -39,10 +39,10 @@ public class StandaloneHiveServerContext implements HiveServerContext {
 
     private TemporaryFolder basedir;
 
-    public StandaloneHiveServerContext(TemporaryFolder basedir, String dbName) throws IOException {
+    public StandaloneHiveServerContext(TemporaryFolder basedir) throws IOException {
         //final TemporaryFolder testBaseDir = new TemporaryFolder();
-        this.basedir = basedir;
-        this.metaStorageUrl =  "jdbc:hsqldb:mem:" + dbName;
+        //this.basedir = basedir;
+        this.metaStorageUrl =  "jdbc:hsqldb:mem:" + UUID.randomUUID().toString();
 
         // my customization
         hiveConf.setIntVar(HIVE_SERVER2_THRIFT_PORT, 10003);
@@ -185,10 +185,10 @@ public class StandaloneHiveServerContext implements HiveServerContext {
         return hiveConf;
     }
 
-    @Override
-    public TemporaryFolder getBaseDir() {
-        return basedir;
-    }
+    //@Override
+    //public TemporaryFolder getBaseDir() {
+    //    return basedir;
+    //}
 
     protected final void createAndSetFolderProperty(HiveConf.ConfVars var, String folder, HiveConf conf,
                                                     TemporaryFolder basedir) {

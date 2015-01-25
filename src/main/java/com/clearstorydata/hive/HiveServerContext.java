@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package com.clearstorydata.hive.test;
+package com.clearstorydata.hive;
 
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.junit.rules.TemporaryFolder;
 
 /**
  * Configuration for the HiveServer.
@@ -34,5 +33,5 @@ public interface HiveServerContext {
      * <p/>
      * Each test method will have a new base dir spawned by the HiveRunner engine.
      */
-    TemporaryFolder getBaseDir();
+    //TemporaryFolder getBaseDir();
 }

@@ -1,6 +1,6 @@
 package com.clearstorydata;
 
-import com.clearstorydata.hive.test.StandaloneHiveServerContext;
+import com.clearstorydata.hive.StandaloneHiveServerContext;
 import org.apache.hive.service.server.HiveServer2;
 import org.junit.After;
 import org.junit.Before;
@@ -16,7 +16,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.UUID;
 
 /**
  * Created by Ian1 on 12/24/14.
@@ -34,11 +33,6 @@ public class HiveSpringTest {
 
     @Before
     public void setup() throws Exception {
-        StandaloneHiveServerContext shsc = new StandaloneHiveServerContext(tf, UUID.randomUUID().toString());
-        hs = new HiveServer2();
-        hs.init(shsc.getHiveConf());
-        hs.start();
-
         try {
             Class.forName(driverName);
         } catch (ClassNotFoundException e) {
@@ -46,6 +40,11 @@ public class HiveSpringTest {
             e.printStackTrace();
             System.exit(1);
         }
+        StandaloneHiveServerContext shsc = new StandaloneHiveServerContext(tf);
+        hs = new HiveServer2();
+        hs.init(shsc.getHiveConf());
+        hs.start();
+
 
     }
 
