@@ -130,6 +130,13 @@
                 <version>2.3</version>
                 <configuration>
                     <artifactSet>
+                        <includes>
+                            <include>org.apache.hive:*</include>
+                            <include>org.apache.hadoop:*</include>
+                            <include>org.hsqldb:*</include>
+                            <include>log4j:*</include>
+                            <includes>org.reflections:*</includes>
+                        </includes>
                         <excludes>
                             <exclude>org.datanucleus:*</exclude>
                         </excludes>
