@@ -6,7 +6,6 @@ import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
-import java.util.UUID;
 
 /**
  * Created by Ian1 on 1/24/15.
@@ -25,7 +24,7 @@ public class HiveServer2Runner {
     public void start() {
         try {
             Class.forName(DRIVER_NAME);
-            File hadoopDir = new File("/tmp/" + UUID.randomUUID());
+            File hadoopDir = new File("/tmp/hiveserver2");
             System.out.println("using hadoopDir : " + hadoopDir);
             final StandaloneHiveServerContext ctx = new StandaloneHiveServerContext(hadoopDir, port);
             HiveServer2 hs = null;

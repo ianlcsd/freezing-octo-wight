@@ -30,7 +30,7 @@ public class Hive2JdbcTest {
         Statement stmt = con.createStatement();
 
         // regular hive query
-        String sql = "select * from csd_agent_tests.csd_agent_acceptance_test_table";
+        String sql = "select * from csd_agent_tests.csd_agent_acceptance_test_table where id % 2 = 0 order by id desc";
         System.out.println("Running: " + sql);
         ResultSet res = stmt.executeQuery(sql);
         while (res.next()) {

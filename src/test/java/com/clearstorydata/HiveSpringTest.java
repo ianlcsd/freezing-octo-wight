@@ -122,12 +122,12 @@ public class HiveSpringTest {
         }
 
         String filepath = "src/test/resources/csd_agent_acceptance_test_table.csv";
-        sql = "load data local inpath '" + filepath + "' into table csd_agent_tests.csd_agent_acceptance_test_table" ;
+        sql = "load data local inpath '" + filepath + "' OVERWRITE into table csd_agent_tests.csd_agent_acceptance_test_table" ;
         System.out.println("Running: " + sql);
         stmt.execute(sql);
 
          // select * query
-        sql = "select * from csd_agent_tests.csd_agent_acceptance_test_table where id % 2 = 0";
+        sql = "select * from csd_agent_tests.csd_agent_acceptance_test_table where id % 2 = 0 order by id desc";
         System.out.println("Running: " + sql);
         res = stmt.executeQuery(sql);
         while (res.next()) {

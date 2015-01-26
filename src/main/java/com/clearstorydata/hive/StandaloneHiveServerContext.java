@@ -16,17 +16,11 @@
 
 package com.clearstorydata.hive;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.shims.Hadoop20SShims;
-import org.apache.hadoop.hive.shims.ShimLoader;
-import org.hsqldb.jdbc.JDBCDriver;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
-
-import static org.apache.hadoop.hive.conf.HiveConf.ConfVars.*;
 
 //import org.junit.rules.TemporaryFolder;
 
@@ -44,18 +38,24 @@ public class StandaloneHiveServerContext {
     private File basedir;
 
     public StandaloneHiveServerContext(File basedir, int port) throws IOException {
-        basedir.deleteOnExit();
-        this.basedir = basedir;
-        this.metaStorageUrl =  "jdbc:hsqldb:mem:" + UUID.randomUUID().toString();
-
-        // my customization
-        hiveConf.setIntVar(HIVE_SERVER2_THRIFT_PORT, port);
-        hiveConf.setBoolVar(HIVE_SERVER2_ENABLE_DOAS, false);
+        // Ian's customization
+        hiveConf.set("hive.server2.thrift.port", String.valueOf(port));
+        hiveConf.set("hive.server2.enable.doAs", "false");
         hiveConf.set("mapred.job.tracker", "local");
+        hiveConf.set("mapreduce.framework.name", "local");
+        hiveConf.set("mapreduce.job.reduces", "1");
         hiveConf.set("hive.exec.mode.local.auto", "false");
 
+        basedir.deleteOnExit();
+        this.basedir = basedir;
+        this.metaStorageUrl =  "jdbc:hsqldb:mem:" + UUID.randomUUID().toString() + ";create=true";
 
-        hiveConf.setBoolVar(HIVESTATSAUTOGATHER, false);
+        //configureJavaSecurityRealm(HiveConf
+        //System.setProperty("java.security.krb5.realm", "");
+        //System.setProperty("java.security.krb5.kdc", "");
+
+
+        hiveConf.set("hive.stats.autogather", "false");
         // Set the hsqldb driver
         hiveConf.set("datanucleus.connectiondrivername", "org.hsqldb.jdbc.JDBCDriver");
         hiveConf.set("javax.jdo.option.ConnectionDriverName", "org.hsqldb.jdbc.JDBCDriver");
@@ -65,137 +65,85 @@ public class StandaloneHiveServerContext {
 
         // Defaults to a 1000 millis sleep in
         // org.apache.hadoop.hive.ql.exec.mr.HadoopJobExecHelper.
-        hiveConf.setLongVar(HiveConf.ConfVars.HIVECOUNTERSPULLINTERVAL, 1L);
+        hiveConf.set("hive.exec.counters.pull.interval", "1");
 
-        hiveConf.setVar(HADOOPBIN, "NO_BIN!");
+        hiveConf.set("hadoop.bin.path", "NO_BIN!");
 
-        try {
-            Class.forName(JDBCDriver.class.getName());
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
-
-        configureJavaSecurityRealm(hiveConf);
-
-        configureJobTrackerMode(hiveConf);
-
-        configureSupportConcurrency(hiveConf);
-
-        configureFileSystem(basedir, hiveConf);
-
-        configureMetaStoreValidation(hiveConf);
-
-        configureMapReduceOptimizations(hiveConf);
-
-        configureCheckForDefaultDb(hiveConf);
-
-        configureAssertionStatus(hiveConf);
-    }
-
-    protected void configureJavaSecurityRealm(HiveConf hiveConf) {
-        // These two properties gets rid of: 'Unable to load realm info from SCDynamicStore'
-        // which seems to have a timeout of about 5 secs.
-        System.setProperty("java.security.krb5.realm", "");
-        System.setProperty("java.security.krb5.kdc", "");
-    }
-
-    protected void configureAssertionStatus(HiveConf conf) {
-        ClassLoader.getSystemClassLoader().setPackageAssertionStatus("org.apache.hadoop.hive.serde2.objectinspector",
-                false);
-    }
-
-    protected void configureCheckForDefaultDb(HiveConf conf) {
-        hiveConf.setBoolean("hive.metastore.checkForDefaultDb", true);
-    }
-
-    protected void configureSupportConcurrency(HiveConf conf) {
-        hiveConf.setBoolVar(HIVE_SUPPORT_CONCURRENCY, false);
-    }
-
-    protected void configureMetaStoreValidation(HiveConf conf) {
-        conf.setBoolVar(METASTORE_VALIDATE_CONSTRAINTS, true);
-        conf.setBoolVar(METASTORE_VALIDATE_COLUMNS, true);
-        conf.setBoolVar(METASTORE_VALIDATE_TABLES, true);
-    }
-
-    protected void configureJobTrackerMode(HiveConf conf) {
-        /*
-        * Overload shims to make sure that org.apache.hadoop.hive.ql.exec.MapRedTask#runningViaChild
-         * validates to false.
-         *
-         * Search for usage of org.apache.hadoop.hive.shims.HadoopShims#isLocalMode to find other affects of this.
-         */
+        /* configureJobTrackerMode
         ReflectionUtils.setStaticField(ShimLoader.class, "hadoopShims", new Hadoop20SShims() {
             @Override
             public boolean isLocalMode(Configuration conf) {
                 return false;
             }
         });
+        */
 
+        // configureSupportConcurrency
+        hiveConf.set("hive.support.concurrency", "false");
 
-    }
+        // configureFileSystem
+        hiveConf.set("javax.jdo.option.ConnectionURL", metaStorageUrl);
+        hiveConf.set("hive.warehouse.subdir.inherit.perms", "true");
 
-    protected void configureFileSystem(File basedir, HiveConf conf) {
-        conf.setVar(METASTORECONNECTURLKEY, metaStorageUrl + ";create=true");
+        hiveConf.set("hive.metastore.warehouse.dir", basedir.getAbsolutePath() + File.separator + "warehouse");
+        hiveConf.set("hive.start.cleanup.scratchdir", basedir.getAbsolutePath() + File.separator + "scratchdir");
+        hiveConf.set("hive.exec.local.scratchdir", basedir.getAbsolutePath() + File.separator + "localscratchdir");
+        hiveConf.set("hive.querylog.location", basedir.getAbsolutePath() + File.separator + "tmp");
+        hiveConf.set("hadoop.tmp.dir", basedir.getAbsolutePath() + File.separator + "hadooptmp");
+        hiveConf.set("test.log.dir", basedir.getAbsolutePath() + File.separator + "logs");
+        hiveConf.set("hive.vs", basedir.getAbsolutePath() + File.separator + "vs");
 
-        createAndSetFolderProperty(METASTOREWAREHOUSE, "warehouse", conf, basedir);
-        createAndSetFolderProperty(SCRATCHDIR, "scratchdir", conf, basedir);
-        createAndSetFolderProperty(LOCALSCRATCHDIR, "localscratchdir", conf, basedir);
-        //createAndSetFolderProperty(METASTOREDIRECTORY, "metastore", conf, basedir);
-        createAndSetFolderProperty(HIVEHISTORYFILELOC, "tmp", conf, basedir);
+        // configureMetaStoreValidation
+        hiveConf.set("datanucleus.validateConstraints", "true");
+        hiveConf.set("datanucleus.validateColumns", "true");
+        hiveConf.set("datanucleus.validateTables", "true");
 
-        conf.setBoolVar(HIVE_WAREHOUSE_SUBDIR_INHERIT_PERMS, true);
-
-        createAndSetFolderProperty("hadoop.tmp.dir", "hadooptmp", conf, basedir);
-        createAndSetFolderProperty("test.log.dir", "logs", conf, basedir);
-        createAndSetFolderProperty("hive.vs", "vs", conf, basedir);
-    }
-
-    private File newFolder(File basedir, String folder) {
-        File f = new File(basedir, folder);
-        f.setWritable(true, false);
-        return f;
-    }
-
-    private File newFile(File basedir, String fileName) {
-        File f = new File(basedir, fileName);
-        f.setWritable(true, false);
-        return f;
-    }
-
-    protected void configureMapReduceOptimizations(HiveConf conf) {
+        // configureMapReduceOptimizations
         /*
         * Switch off all optimizers otherwise we didn't
         * manage to contain the map reduction within this JVM.
         */
-        conf.setBoolVar(HIVE_INFER_BUCKET_SORT, false);
-        conf.setBoolVar(HIVEMETADATAONLYQUERIES, false);
-        conf.setBoolVar(HIVEOPTINDEXFILTER, false);
-        conf.setBoolVar(HIVECONVERTJOIN, false);
-        conf.setBoolVar(HIVESKEWJOIN, false);
+        hiveConf.set("hive.exec.infer.bucket.sort", "false");
+        hiveConf.set("hive.optimize.metadataonly", "false");
+        hiveConf.set("hive.optimize.index.filter", "false");
+        hiveConf.set("hive.auto.convert.join", "false");
+        hiveConf.set("hive.optimize.skewjoin", "false");
+
+
+        // configureCheckForDefaultDb
+        hiveConf.set("hive.metastore.checkForDefaultDb", "true");
+
+        //  configureAssertionStatus
+        //ClassLoader.getSystemClassLoader().setPackageAssertionStatus("org.apache.hadoop.hive.serde2.objectinspector", false);
+
     }
 
-    public String getMetaStoreUrl() {
-        return metaStorageUrl;
+
+    private File newFolder(File basedir, String folder) {
+        File f = new File(basedir, folder);
+        //f.setWritable(true, false);
+        return f;
     }
+/*
+    private File newFile(File basedir, String fileName) {
+        File f = new File(basedir, fileName);
+        //f.setWritable(true, false);
+        return f;
+    }
+*/
 
     public HiveConf getHiveConf() {
         return hiveConf;
     }
-
-    //@Override
-    //public TemporaryFolder getBaseDir() {
-    //    return basedir;
-    //}
-
-    protected final void createAndSetFolderProperty(HiveConf.ConfVars var, String folder, HiveConf conf,
+/*
+    protected final void createAndSetFolderProperty(HiveConf.ConfVars var, String folder,
                                                     File basedir) {
-        conf.setVar(var, newFolder(basedir, folder).getAbsolutePath());
+        hiveConf.setVar(var, newFolder(basedir, folder).getAbsolutePath());
     }
-
-    protected final void createAndSetFolderProperty(String key, String folder, HiveConf conf, File basedir) {
-        conf.set(key, newFolder(basedir, folder).getAbsolutePath());
+*/
+    protected final void createAndSetFolderProperty(String key, String folder) {
+        //hiveConf.set(key, new File(folder).getAbsolutePath());
+        hiveConf.set(key, folder);
     }
 
 
