@@ -16,9 +16,11 @@
 
 package com.clearstorydata.hive;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.shims.Hadoop20SShims;
+import org.apache.hadoop.hive.shims.ShimLoader;
 import org.hsqldb.jdbc.JDBCDriver;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,30 +28,35 @@ import java.util.UUID;
 
 import static org.apache.hadoop.hive.conf.HiveConf.ConfVars.*;
 
+//import org.junit.rules.TemporaryFolder;
+
 /**
  * Configuration for running the HiveServer within this JVM with zero external dependencies.
  * <p/>
  * This class contains a bunch of methods meant to be overridden in order to create slightly different contexts.
  */
-public class StandaloneHiveServerContext implements HiveServerContext {
+public class StandaloneHiveServerContext {
 
     private String metaStorageUrl;
 
     private HiveConf hiveConf = new HiveConf();
 
-    private TemporaryFolder basedir;
+    private File basedir;
 
-    public StandaloneHiveServerContext(TemporaryFolder basedir) throws IOException {
-        //final TemporaryFolder testBaseDir = new TemporaryFolder();
-        //this.basedir = basedir;
+    public StandaloneHiveServerContext(File basedir, int port) throws IOException {
+        basedir.deleteOnExit();
+        this.basedir = basedir;
         this.metaStorageUrl =  "jdbc:hsqldb:mem:" + UUID.randomUUID().toString();
 
         // my customization
-        hiveConf.setIntVar(HIVE_SERVER2_THRIFT_PORT, 10003);
+        hiveConf.setIntVar(HIVE_SERVER2_THRIFT_PORT, port);
         hiveConf.setBoolVar(HIVE_SERVER2_ENABLE_DOAS, false);
+        hiveConf.set("mapred.job.tracker", "local");
+        hiveConf.set("hive.exec.mode.local.auto", "false");
+
 
         hiveConf.setBoolVar(HIVESTATSAUTOGATHER, false);
-        // Set the hsqldb driver. datanucleus will
+        // Set the hsqldb driver
         hiveConf.set("datanucleus.connectiondrivername", "org.hsqldb.jdbc.JDBCDriver");
         hiveConf.set("javax.jdo.option.ConnectionDriverName", "org.hsqldb.jdbc.JDBCDriver");
 
@@ -118,17 +125,18 @@ public class StandaloneHiveServerContext implements HiveServerContext {
          * validates to false.
          *
          * Search for usage of org.apache.hadoop.hive.shims.HadoopShims#isLocalMode to find other affects of this.
+         */
         ReflectionUtils.setStaticField(ShimLoader.class, "hadoopShims", new Hadoop20SShims() {
             @Override
             public boolean isLocalMode(Configuration conf) {
                 return false;
             }
         });
-           */
+
 
     }
 
-    protected void configureFileSystem(TemporaryFolder basedir, HiveConf conf) {
+    protected void configureFileSystem(File basedir, HiveConf conf) {
         conf.setVar(METASTORECONNECTURLKEY, metaStorageUrl + ";create=true");
 
         createAndSetFolderProperty(METASTOREWAREHOUSE, "warehouse", conf, basedir);
@@ -144,24 +152,16 @@ public class StandaloneHiveServerContext implements HiveServerContext {
         createAndSetFolderProperty("hive.vs", "vs", conf, basedir);
     }
 
-    private File newFolder(TemporaryFolder basedir, String folder) {
-        try {
-            File f = basedir.newFolder(folder);
-            f.setWritable(true, false);
-            return f;
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to create tmp dir: " + e.getMessage(), e);
-        }
+    private File newFolder(File basedir, String folder) {
+        File f = new File(basedir, folder);
+        f.setWritable(true, false);
+        return f;
     }
 
-    private File newFile(TemporaryFolder basedir, String fileName) {
-        try {
-            File f = basedir.newFile(fileName);
-            f.setWritable(true, false);
-            return f;
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to create tmp file: " + e.getMessage(), e);
-        }
+    private File newFile(File basedir, String fileName) {
+        File f = new File(basedir, fileName);
+        f.setWritable(true, false);
+        return f;
     }
 
     protected void configureMapReduceOptimizations(HiveConf conf) {
@@ -176,7 +176,6 @@ public class StandaloneHiveServerContext implements HiveServerContext {
         conf.setBoolVar(HIVESKEWJOIN, false);
     }
 
-    @Override
     public String getMetaStoreUrl() {
         return metaStorageUrl;
     }
@@ -191,11 +190,11 @@ public class StandaloneHiveServerContext implements HiveServerContext {
     //}
 
     protected final void createAndSetFolderProperty(HiveConf.ConfVars var, String folder, HiveConf conf,
-                                                    TemporaryFolder basedir) {
+                                                    File basedir) {
         conf.setVar(var, newFolder(basedir, folder).getAbsolutePath());
     }
 
-    protected final void createAndSetFolderProperty(String key, String folder, HiveConf conf, TemporaryFolder basedir) {
+    protected final void createAndSetFolderProperty(String key, String folder, HiveConf conf, File basedir) {
         conf.set(key, newFolder(basedir, folder).getAbsolutePath());
     }
 
